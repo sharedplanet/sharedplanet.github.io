@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ODA Visuals</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 40px;
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    svg {
+      display: block;
+      margin: auto;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .slider-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .chart-section {
+      margin-bottom: 60px;
+    }
+
+    .legend {
+      font-size: 14px;
+      text-anchor: start;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Stacked Bar Chart -->
+  <div class="chart-section">
+    <h2>In-Donor Refugee Costs as % of ODA (2021–2023)</h2>
+    <svg id="stackedBarChart" width="800" height="400"></svg>
+    <div class="slider-container">
+      <span><strong>Year:</strong></span>
+      <input type="range" id="barYearSlider" min="2021" max="2023" value="2022">
+      <span id="barYearLabel">2022</span>
+    </div>
+  </div>
+
+  <!-- Donut Chart -->
+  <div class="chart-section">
+    <h2>Tied vs Untied Bilateral ODA (2021–2023)</h2>
+    <svg id="donutChart" width="500" height="400"></svg>
+    <div class="slider-container">
+      <span><strong>Year:</strong></span>
+      <input type="range" id="donutYearSlider" min="2021" max="2023" value="2022">
+      <span id="donutYearLabel">2022</span>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const tooltip = d3.select("#tooltip");
+
+    // ------------------------
+    // STACKED BAR CHART
+    // ------------------------
+
+    const stackedData = {
+      2021: [
+        { country: "Austria", refugee: 28, other: 72 },
+        { country: "Germany", refugee: 35, other: 65 },
+        { country: "Sweden", refugee: 26, other: 74 },
+        { country: "Malta", refugee: 87, other: 13 }
+      ],
+      2022: [
+        { country: "Austria", refugee: 30, other: 70 },
+        { country: "Germany", refugee: 33, other: 67 },
+        { country: "Sweden", refugee: 27, other: 73 },
+        { country: "Malta", refugee: 89, other: 11 }
+      ],
+      2023: [
+        { country: "Austria", refugee: 29, other: 71 },
+        { country: "Germany", refugee: 32, other: 68 },
+        { country: "Sweden", refugee: 25, other: 75 },
+        { country: "Malta", refugee: 88, other: 12 }
+      ]
+    };
+
+    const barSvg = d3.select("#stackedBarChart"),
+          margin = { top: 30, right: 20, bottom: 40, left: 50 },
+          width = +barSvg.attr("width") - margin.left - margin.right,
+          height = +barSvg.attr("height") - margin.top - margin.bottom;
+
+    const barG = barSvg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleBand().padding(0.3).range([0, width]);
+    const y = d3.scaleLinear().range([height, 0]);
+    const color = d3.scaleOrdinal().range(["#e67e22", "#3498db"]);
+
+    const barStack = d3.stack().keys(["refugee", "other"]);
+
+    const barYearSlider = d3.select("#barYearSlider");
+    const barYearLabel = d3.select("#barYearLabel");
+
+    function updateBarChart(year) {
+      const data = stackedData[year];
+      const series = barStack(data);
+
+      x.domain(data.map(d => d.country));
+      y.domain([0, 100]);
+
+      barG.selectAll(".x-axis").remove();
+      barG.selectAll(".y-axis").remove();
+
+      barG.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x));
+
+      barG.append("g")
+        .attr("class", "y-axis")
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d => d + "%"));
+
+      const groups = barG.selectAll("g.layer")
+        .data(series, d => d.key);
+
+      groups.join("g")
+        .attr("class", "layer")
+        .attr("fill", d => color(d.key))
+        .selectAll("rect")
+        .data(d => d.map(e => ({ ...e, key: d.key })))
+        .join("rect")
+        .transition()
+        .duration(800)
+        .attr("x", d => x(d.data.country))
+        .attr("y", d => y(d[1]))
+        .attr("height", d => y(d[0]) - y(d[1]))
+        .attr("width", x.bandwidth());
+
+      barG.selectAll("rect")
+        .on("mousemove", (event, d) => {
+          tooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY - 30}px`)
+            .style("opacity", 1)
+            .html(`<strong>${d.data.country}</strong><br>
+              ${d.key === "refugee" ? "In-Donor Costs" : "Other ODA"}: ${d.data[d.key]}%`);
+        })
+        .on("mouseout", () => tooltip.style("opacity", 0));
+    }
+
+    barYearSlider.on("input", function () {
+      const year = +this.value;
+      barYearLabel.text(year);
+      updateBarChart(year);
+    });
+
+    updateBarChart(+barYearSlider.property("value"));
+
+    // ------------------------
+    // DONUT CHART
+    // ------------------------
+
+    const donutData = {
+      2021: { tied: 3.8, untied: 61.2 },
+      2022: { tied: 4.4, untied: 63.2 },
+      2023: { tied: 4.1, untied: 65.9 }
+    };
+
+    const donutSvg = d3.select("#donutChart")
+      .append("g")
+      .attr("transform", "translate(250,200)");
+
+    const radius = 150;
+    const pie = d3.pie().value(d => d.value).sort(null);
+    const arc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius);
+    const donutColor = d3.scaleOrdinal().domain(["tied", "untied"]).range(["#e74c3c", "#2ecc71"]);
+
+    const legend = donutSvg.append("g")
+      .attr("transform", `translate(${-(radius + 40)}, ${-radius})`);
+
+    legend.selectAll("rect")
+      .data(["tied", "untied"])
+      .join("rect")
+      .attr("x", 0)
+      .attr("y", (d, i) => i * 25)
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("fill", d => donutColor(d));
+
+    legend.selectAll("text")
+      .data(["Tied Aid", "Untied Aid"])
+      .join("text")
+      .attr("x", 24)
+      .attr("y", (d, i) => i * 25 + 12)
+      .text(d => d)
+      .attr("fill", "#333")
+      .attr("class", "legend");
+
+    const donutYearSlider = d3.select("#donutYearSlider");
+    const donutYearLabel = d3.select("#donutYearLabel");
+
+    function updateDonutChart(year) {
+      const raw = donutData[year];
+      const total = raw.tied + raw.untied;
+      const data = Object.entries(raw).map(([key, value]) => ({ key, value }));
+
+      const arcs = donutSvg.selectAll("path").data(pie(data), d => d.data.key);
+
+      arcs.join(
+        enter => enter.append("path")
+          .attr("fill", d => donutColor(d.data.key))
+          .each(function (d) { this._current = { startAngle: 0, endAngle: 0 }; })
+          .transition()
+          .duration(800)
+          .attrTween("d", function (d) {
+            const i = d3.interpolate(this._current, d);
+            this._current = i(1);
+            return t => arc(i(t));
+          }),
+        update => update.transition().duration(600)
+          .attrTween("d", function (d) {
+            const i = d3.interpolate(this._current, d);
+            this._current = i(1);
+            return t => arc(i(t));
+          })
+      )
+      .on("mousemove", (event, d) => {
+        const pct = ((d.data.value / total) * 100).toFixed(1);
+        tooltip
+          .style("left", `${event.pageX + 10}px`)
+          .style("top", `${event.pageY - 40}px`)
+          .style("opacity", 1)
+          .html(`<strong>${d.data.key === "tied" ? "Tied Aid" : "Untied Aid"}</strong><br>€${d.data.value.toFixed(1)}B (${pct}%)`);
+      })
+      .on("mouseout", () => tooltip.style("opacity", 0));
+    }
+
+    donutYearSlider.on("input", function () {
+      const year = +this.value;
+      donutYearLabel.text(year);
+      updateDonutChart(year);
+    });
+
+    updateDonutChart(+donutYearSlider.property("value"));
+  </script>
+</body>
+</html>
