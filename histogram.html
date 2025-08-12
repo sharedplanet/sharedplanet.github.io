@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 30px;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    background: none;
+  }
+
+  .container {
+    width: 780px;
+  }
+
+  .header-group {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+
+  h1 {
+    font-weight: 700;
+    font-size: 1.8rem; /* smaller */
+    margin-bottom: 8px;
+    color: #2c3e50;
+    letter-spacing: 0.03em;
+  }
+
+  h3 {
+    font-weight: 400;
+    font-size: 1.1rem;
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #555;
+    line-height: 1.5;
+    max-width: 600px;
+  }
+
+  svg {
+    display: block;
+    margin: 0 auto 60px auto;
+  }
+
+  #toggleGroup {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #toggleIcon {
+    width: 42px; /* bigger */
+    height: 42px;
+    border-radius: 21px;
+    background-color: #dc322f;
+    position: relative;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  #toggleIcon:hover {
+    background-color: #b22222;
+  }
+  #toggleIcon.inflated-hidden::before {
+    left: 6px;
+  }
+  #toggleIcon::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 24px; /* ON */
+    width: 28px;
+    height: 28px;
+    background-color: white;
+    border-radius: 50%;
+    transition: left 0.3s ease;
+  }
+  #toggleIcon.inflated-hidden::before {
+    left: 7px; /* OFF */
+  }
+
+  #toggleText {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    fill: #333;
+    user-select: none;
+    pointer-events: none;
+    alignment-baseline: middle;
+  }
+
+  .legend rect {
+    cursor: default;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    padding: 7px 12px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #333;
+    pointer-events: none;
+    opacity: 0;
+  }
+</style>
+<body>
+  <div class="container">
+    <div class="header-group">
+      <h4>These numbers are purely for illustrative purposes and do not reflect real numbers.</h4>
+      <h1>When Numbers Lie: The 0.7% ODA Illusion</h1>
+      <h3>Many countries meet the aid target mainly by counting inflated ODA costs — masking the real gap.</h3>
+    </div>
+
+    <svg width="820" height="450" aria-label="Stacked bar chart showing inflated and non-inflated ODA"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const svg = d3.select("svg");
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    const margin = { top: 60, right: 120, bottom: 100, left: 70 };
+
+    const target = 0.007; // 0.7%
+
+    const data = [
+      { country: "Malta", nonInflated: 0.0045, inflated: 0.0035 },
+      { country: "Ireland", nonInflated: 0.0038, inflated: 0.0040 },
+      { country: "Czechia", nonInflated: 0.0030, inflated: 0.0045 },
+      { country: "Slovenia", nonInflated: 0.0050, inflated: 0.0020 },
+      { country: "Estonia", nonInflated: 0.0040, inflated: 0.0025 },
+      { country: "Germany", nonInflated: 0.0068, inflated: 0.0002 },
+      { country: "France", nonInflated: 0.0055, inflated: 0.0005 },
+      { country: "Spain", nonInflated: 0.0040, inflated: 0.0010 },
+      { country: "Sweden", nonInflated: 0.0080, inflated: 0.0000 },
+    ];
+
+    let inflatedVisible = true;
+
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.country))
+      .range([margin.left, width - margin.right])
+      .padding(0.3);
+
+    const maxSum = d3.max(data, d => d.nonInflated + d.inflated);
+    const yMaxDomain = Math.max(maxSum, target);
+
+    const y = d3.scaleLinear()
+      .domain([0, yMaxDomain * 1.15])
+      .range([height - margin.bottom, margin.top]);
+
+    
+
+    const colors = {
+      nonInflated: "#f29a2e", // warm orange
+      inflated: "red", // gradient fill
+      gap: "#7f8c8d"          // subtle gray for gap
+    };
+
+    const xAxis = g => g
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "rotate(-40)")
+      .style("text-anchor", "end")
+      .style("font-family", "Poppins, sans-serif")
+      .style("font-size", "12px");
+
+    const yAxis = g => g
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(y)
+        .ticks(8)
+        .tickFormat(d => (d * 100).toFixed(1) + "%"))
+      .selectAll("text")
+      .style("font-family", "Poppins, sans-serif")
+      .style("font-size", "12px");
+
+    svg.append("g").call(xAxis);
+    svg.append("g").call(yAxis);
+
+    svg.append("text")
+      .attr("x", -(height / 2))
+      .attr("y", 20)
+      .attr("transform", "rotate(-90)")
+      .attr("text-anchor", "middle")
+      .style("font-family", "Poppins, sans-serif")
+      .style("font-weight", "700")
+      .text("ODA as % of GNI");
+
+    // Dashed line at 0.7% target
+    svg.append("line")
+      .attr("x1", margin.left)
+      .attr("x2", width - margin.right)
+      .attr("y1", y(target))
+      .attr("y2", y(target))
+      .attr("stroke", "red")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "6 4");
+
+    svg.append("text")
+      .attr("x", width - margin.right + 15)
+      .attr("y", y(target) - 10)
+      .attr("text-anchor", "start")
+      .style("fill", "red")
+      .style("font-family", "Poppins, sans-serif")
+      .style("font-weight", "700")
+      .style("font-size", "13px")
+      .text("0.7% target");
+
+    // Toggle group - bigger background for text
+    const toggleGroup = svg.append("g")
+      .attr("id", "toggleGroup")
+      .attr("transform", `translate(${width - margin.right - 140},${margin.top - 40})`)
+      .attr("tabindex", 0)
+      .attr("role", "button")
+      .attr("aria-pressed", inflatedVisible);
+
+    // Background rect for toggle + text
+    toggleGroup.append("rect")
+      .attr("x", -10)
+      .attr("y", -5)
+      .attr("width", 200)
+      .attr("height", 55)
+      .attr("fill", "#f0f0f0")
+      .attr("rx", 20)
+      .attr("ry", 20);
+
+    // Toggle icon
+    const toggleIcon = toggleGroup.append("rect")
+      .attr("id", "toggleIcon")
+      .attr("class", inflatedVisible ? "" : "inflated-hidden")
+      .attr("width", 42)
+      .attr("height", 42)
+      .attr("rx", 21)
+      .attr("ry", 21)
+      .attr("fill", inflatedVisible ? colors.inflated : "#999");
+
+    // Toggle text
+    const toggleText = toggleGroup.append("text")
+      .attr("id", "toggleText")
+      .attr("x", 55)
+      .attr("y", 21)
+      .style("alignmentBaseline", "middle")
+      .text(inflatedVisible ? "Hide Inflated ODA" : "Show Inflated ODA");
+
+    // Bars groups
+    const barsGroup = svg.append("g");
+
+    // Tooltip setup
+    const tooltip = d3.select("body").append("div")
+      .attr("class", "tooltip");
+
+    // Bars
+    const nonInflatedBars = barsGroup.selectAll(".bar-noninflated")
+      .data(data)
+      .join("rect")
+      .attr("class", "bar-noninflated")
+      .attr("x", d => x(d.country))
+      .attr("width", x.bandwidth())
+      .attr("y", y(0))
+      .attr("height", 0)
+      .attr("fill", colors.nonInflated);
+
+    const inflatedBars = barsGroup.selectAll(".bar-inflated")
+      .data(data)
+      .join("rect")
+      .attr("class", "bar-inflated")
+      .attr("x", d => x(d.country))
+      .attr("width", x.bandwidth())
+      .attr("y", y(0))
+      .attr("height", 0)
+      .attr("fill", colors.inflated);
+
+    const gapBars = barsGroup.selectAll(".bar-gap")
+      .data(data)
+      .join("rect")
+      .attr("class", "bar-gap")
+      .attr("x", d => x(d.country))
+      .attr("width", x.bandwidth())
+      .attr("y", y(0))
+      .attr("height", 0)
+      .attr("fill", colors.gap)
+      .style("opacity", 0.7);
+
+    // Tooltip functions
+    function showTooltip(event, d) {
+      const sum = d.nonInflated + (inflatedVisible ? d.inflated : 0);
+      const gap = Math.max(0, target - sum);
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`
+        <strong>${d.country}</strong><br/>
+        Non-inflated ODA: ${(d.nonInflated * 100).toFixed(2)}%<br/>
+        Inflated ODA: ${(inflatedVisible ? (d.inflated * 100).toFixed(2) + "%" : "Hidden")}<br/>
+        <strong>Gap to 0.7% target: ${(gap * 100).toFixed(2)}%</strong>
+      `)
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    }
+    function hideTooltip() {
+      tooltip.transition().duration(300).style("opacity", 0);
+    }
+
+    nonInflatedBars.on("mouseover", showTooltip).on("mouseout", hideTooltip);
+    inflatedBars.on("mouseover", showTooltip).on("mouseout", hideTooltip);
+    gapBars.on("mouseover", showTooltip).on("mouseout", hideTooltip);
+
+    // Update bars
+    function updateChart() {
+      if (inflatedVisible) {
+        toggleIcon.classed("inflated-hidden", false).attr("fill", colors.inflated);
+        toggleIcon.select("::before");
+        toggleGroup.attr("aria-pressed", true);
+        toggleText.text("Hide Inflated ODA");
+      } else {
+        toggleIcon.classed("inflated-hidden", true).attr("fill", "#999");
+        toggleGroup.attr("aria-pressed", false);
+        toggleText.text("Show Inflated ODA");
+      }
+
+      // Toggle icon circle position
+      toggleIcon.transition().duration(300)
+        .attrTween("rx", () => d3.interpolateNumber(21, 21)); // just for smoothness
+
+      toggleIcon.classed("inflated-hidden", !inflatedVisible);
+
+      // Move toggle knob (using a pseudo approach)
+      if (inflatedVisible) {
+        toggleIcon.style("--knob-left", "24px");
+      } else {
+        toggleIcon.style("--knob-left", "7px");
+      }
+
+      // Animate bars
+      nonInflatedBars.transition()
+        .duration(700)
+        .attr("y", d => y(d.nonInflated))
+        .attr("height", d => y(0) - y(d.nonInflated));
+
+      inflatedBars.transition()
+        .duration(700)
+        .attr("y", d => inflatedVisible ? y(d.nonInflated + d.inflated) : y(0))
+        .attr("height", d => inflatedVisible ? y(0) - y(d.inflated) : 0)
+        .style("opacity", inflatedVisible ? 1 : 0);
+
+      gapBars.transition()
+        .duration(700)
+        .attr("y", d => {
+          const sum = d.nonInflated + (inflatedVisible ? d.inflated : 0);
+          const gap = Math.max(0, target - sum);
+          return y(sum + gap);
+        })
+        .attr("height", d => {
+          const sum = d.nonInflated + (inflatedVisible ? d.inflated : 0);
+          const gap = Math.max(0, target - sum);
+          return y(0) - y(gap);
+        })
+        .style("opacity", d => {
+          const sum = d.nonInflated + (inflatedVisible ? d.inflated : 0);
+          return (target - sum) > 0 ? 0.7 : 0;
+        });
+    }
+
+    // Animate on load
+    function animateLoad() {
+      nonInflatedBars
+        .attr("y", y(0))
+        .attr("height", 0)
+        .transition()
+        .duration(900)
+        .attr("y", d => y(d.nonInflated))
+        .attr("height", d => y(0) - y(d.nonInflated));
+
+      inflatedBars
+        .attr("y", y(0))
+        .attr("height", 0)
+        .transition()
+        .duration(900)
+        .delay(500)
+        .attr("y", d => y(d.nonInflated + d.inflated))
+        .attr("height", d => y(0) - y(d.inflated))
+        .style("opacity", 1);
+
+      gapBars
+        .attr("y", y(0))
+        .attr("height", 0)
+        .transition()
+        .duration(900)
+        .delay(1000)
+        .attr("y", d => {
+          const sum = d.nonInflated + d.inflated;
+          const gap = Math.max(0, target - sum);
+          return y(sum + gap);
+        })
+        .attr("height", d => {
+          const sum = d.nonInflated + d.inflated;
+          const gap = Math.max(0, target - sum);
+          return y(0) - y(gap);
+        })
+        .style("opacity", d => {
+          const sum = d.nonInflated + d.inflated;
+          return (target - sum) > 0 ? 0.7 : 0;
+        });
+    }
+
+    toggleGroup.on("click", () => {
+      inflatedVisible = !inflatedVisible;
+      updateChart();
+    });
+
+    toggleGroup.on("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        inflatedVisible = !inflatedVisible;
+        updateChart();
+      }
+    });
+
+    // Legend
+    const legend = svg.append("g")
+      .attr("class", "legend")
+      .attr("transform", `translate(${margin.left},${height - margin.bottom + 50})`);
+
+    const legendData = [
+      { label: "Non-Inflated ODA", color: colors.nonInflated },
+      { label: "Inflated ODA", color: "#dc322f" }, // solid bright red in legend
+      { label: "Gap to 0.7% Target", color: colors.gap }
+    ];
+
+    const legendItem = legend.selectAll(".legend-item")
+      .data(legendData)
+      .join("g")
+      .attr("class", "legend-item")
+      .attr("transform", (d, i) => `translate(${i * 230},0)`);
+
+    legendItem.append("rect")
+      .attr("width", 30)
+      .attr("height", 15)
+      .attr("fill", d => d.color)
+      .attr("rx", 3)
+      .attr("ry", 3);
+
+    legendItem.append("text")
+      .attr("x", 40)
+      .attr("y", 12)
+      .style("font-family", "Poppins, sans-serif")
+      .style("font-size", "14px")
+      .text(d => d.label);
+
+    animateLoad();
+
+  </script>
+</body>
