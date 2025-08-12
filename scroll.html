@@ -189,7 +189,6 @@ pointGroup.selectAll("circle")
   .attr("r", 6)
   .attr("fill", "#cc0000");
 
-// Only first and last labels
 const percentLabels = svg.append("g")
   .attr("class", "percent-labels")
   .style("opacity", 0);
@@ -199,8 +198,8 @@ percentLabels.selectAll("text")
   .enter()
   .append("text")
   .attr("class", "percent-label")
-  .attr("x", (d, i) => i === 0 ? x(d.year) - 51 : x(d.year) + 10) // first to left, last to right
-  .attr("y", (d, i) => i === 0 ? y(d.share) + 8 : y(d.share) + 5) // align vertically
+  .attr("x", (d, i) => i === 0 ? x(d.year) - 51 : x(d.year) + 10)
+  .attr("y", (d, i) => i === 0 ? y(d.share) + 8 : y(d.share) + 5)
   .text(d => d.share.toFixed(1) + "%");
 
 const tooltip = d3.select("body").append("div")
