@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 20px;
+    color: #333;
+  }
+  h2 {
+    margin-bottom: 5px;
+  }
+  #controls {
+    margin-bottom: 15px;
+  }
+  select {
+    padding: 5px 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+  }
+  svg {
+    display: block;
+    margin-left: 0;
+    margin-right: auto;
+  }
+  .node rect {
+    stroke: #fff;
+    stroke-width: 1px;
+  }
+  .node text {
+    font-size: 12px;
+    fill: #fff;
+    pointer-events: none;
+  }
+</style>
+
+<body>
+  <h2>ODA Composition by Country</h2>
+  <p>Select a country to view the % breakdown of its ODA allocations.</p>
+
+  <div id="controls">
+    <label for="countrySelect">Country: </label>
+    <select id="countrySelect"></select>
+  </div>
+
+  <div id="chart"></div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const odaData = {
+      "France": [
+        { category: "Bilateral Aid", value: 40 },
+        { category: "Multilateral Aid", value: 30 },
+        { category: "Debt Relief", value: 15 },
+        { category: "Refugee Costs", value: 15 }
+      ],
+      "Germany": [
+        { category: "Bilateral Aid", value: 35 },
+        { category: "Multilateral Aid", value: 40 },
+        { category: "Debt Relief", value: 10 },
+        { category: "Refugee Costs", value: 15 }
+      ],
+      "UK": [
+        { category: "Bilateral Aid", value: 50 },
+        { category: "Multilateral Aid", value: 25 },
+        { category: "Debt Relief", value: 15 },
+        { category: "Refugee Costs", value: 10 }
+      ]
+    };
+
+    const width = 500, height = 300;
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    const color = d3.scaleOrdinal(d3.schemeSet2);
+
+    const treemap = d3.treemap()
+      .size([width, height])
+      .padding(2);
+
+    const dropdown = d3.select("#countrySelect");
+    dropdown.selectAll("option")
+      .data(Object.keys(odaData))
+      .enter()
+      .append("option")
+      .text(d => d);
+
+    dropdown.on("change", function () {
+      drawTreemap(this.value);
+    });
+
+    function drawTreemap(country) {
+      const root = d3.hierarchy({ children: odaData[country] })
+        .sum(d => d.value);
+
+      treemap(root);
+
+      const nodes = svg.selectAll(".node")
+        .data(root.leaves(), d => d.data.category);
+
+      nodes.exit().remove();
+
+      const nodeEnter = nodes.enter()
+        .append("g")
+        .attr("class", "node");
+
+      nodeEnter.append("rect");
+      nodeEnter.append("text");
+
+      const mergedNodes = nodeEnter.merge(nodes);
+
+      mergedNodes.select("rect")
+        .transition().duration(500)
+        .attr("x", d => d.x0)
+        .attr("y", d => d.y0)
+        .attr("width", d => d.x1 - d.x0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", (d, i) => color(i));
+
+      mergedNodes.select("text")
+        .transition().duration(500)
+        .attr("x", d => d.x0 + 5)
+        .attr("y", d => d.y0 + 20)
+        .text(d => `${d.data.category} (${d.data.value}%)`);
+    }
+
+    // Initial load
+    drawTreemap(Object.keys(odaData)[0]);
+  </script>
+</body>
